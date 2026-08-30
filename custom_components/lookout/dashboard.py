@@ -20,7 +20,7 @@ def build_dashboard_card_yaml(cameras: list[dict[str, str]]) -> str:
     """
     lines = [
         "type: entities",
-        "title: \u2601\ufe0f Lookout",
+        "title: Lookout",
         "show_header_toggle: false",
         "entities:",
         "  - entity: sensor.lookout_sky_condition",
