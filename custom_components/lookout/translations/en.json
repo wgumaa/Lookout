@@ -1,0 +1,66 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up Lookout",
+        "description": "Choose your LLM Vision provider, model, and how often to analyze the sky. You'll add cameras next.",
+        "data": {
+          "llmvision_provider": "LLM Vision provider ID",
+          "model": "Model",
+          "scan_interval_minutes": "Scan interval (minutes)"
+        }
+      },
+      "add_camera": {
+        "title": "Add a camera",
+        "description": "Cameras added so far: {camera_count}. Pick a camera with a view of the sky and give it a short name (e.g. \"Entry\", \"Garden\", \"Driveway\"). Leave \"Add another camera\" checked to keep adding, or uncheck it to finish.",
+        "data": {
+          "entity_id": "Camera",
+          "name": "Name",
+          "add_another": "Add another camera"
+        }
+      },
+      "dashboard": {
+        "title": "Suggested dashboard card",
+        "description": "Setup is almost done. Below is a starting-point Lovelace card using the entities this integration creates - paste it into a dashboard (as a Manual card) and adjust as needed. Actual entity IDs may get a numeric suffix if a name is already in use elsewhere.\n\n```yaml\n{dashboard_yaml}\n```",
+        "data": {}
+      }
+    },
+    "error": {
+      "camera_already_added": "This camera has already been added."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Lookout options",
+        "description": "Update your provider, model, or scan interval. You'll manage cameras next.",
+        "data": {
+          "llmvision_provider": "LLM Vision provider ID",
+          "model": "Model",
+          "scan_interval_minutes": "Scan interval (minutes)"
+        }
+      },
+      "manage_cameras": {
+        "title": "Manage cameras",
+        "description": "Uncheck any camera you want to remove. Check \"Add more cameras\" to add new ones using the same flow as initial setup, or leave it unchecked to save with just the cameras selected above.",
+        "data": {
+          "keep_entity_ids": "Cameras to keep",
+          "add_more": "Add more cameras"
+        }
+      },
+      "add_camera": {
+        "title": "Add a camera",
+        "description": "Cameras so far: {camera_count}. Pick a camera with a view of the sky and give it a short name (e.g. \"Entry\", \"Garden\", \"Driveway\"). Leave \"Add another camera\" checked to keep adding, or uncheck it to finish.",
+        "data": {
+          "entity_id": "Camera",
+          "name": "Name",
+          "add_another": "Add another camera"
+        }
+      }
+    },
+    "error": {
+      "camera_already_added": "This camera has already been added.",
+      "no_cameras_selected": "Select at least one camera, or add a new one."
+    }
+  }
+}

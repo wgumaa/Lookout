@@ -1,0 +1,12 @@
+{
+  "domain": "lookout",
+  "name": "Lookout",
+  "codeowners": ["@wgumaa"],
+  "config_flow": true,
+  "dependencies": ["llmvision"],
+  "documentation": "https://github.com/wgumaa/Lookout",
+  "issue_tracker": "https://github.com/wgumaa/Lookout/issues",
+  "iot_class": "cloud_polling",
+  "requirements": [],
+  "version": "0.2.0"
+}
