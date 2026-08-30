@@ -1,6 +1,6 @@
 {
-  "name": "AI Sky Observer",
+  "name": "Lookout",
   "render_readme": true,
-  "homeassistant": "2024.6.0",
-  "domains": ["sensor", "binary_sensor"]
+  "homeassistant": "2025.7.0",
+  "domains": ["sensor", "binary_sensor", "number", "button"]
 }
