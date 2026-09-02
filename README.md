@@ -110,8 +110,14 @@ search for Lookout.
    name, and choose a scan interval from 1 to 30 minutes.
 
    The provider ID is not something you choose or type freely. It is
-   a code LLM Vision generates when you set up a provider. To find
-   it: go to Developer Tools, then Actions, search for
+   a code LLM Vision generates when you set up a provider. The
+   easiest way to find it: go to Settings, then Devices and Services,
+   find your provider under LLM Vision, click it, then click the
+   config entry and choose Copy Entry ID (or the equivalent copy icon
+   next to the entry in newer Home Assistant versions).
+
+   If that option is not available in your version, an alternative:
+   go to Developer Tools, then Actions, search for
    llmvision.image_analyzer, switch to UI mode, select your provider
    from the Provider dropdown, then switch to YAML mode. The value
    shown after "provider:" is what you need, for example something
@@ -140,24 +146,95 @@ than Gemini:
 
 OpenAI: earlier versions of Lookout produced a JSON schema that OpenAI
 rejected outright with an error mentioning additionalProperties. This
-has been fixed as of version 0.4.1, which adds the required
-additionalProperties: false to the schema. If you still see a schema
-error on OpenAI, please open an issue with the exact message.
+was fixed in version 0.4.1, which adds the required
+additionalProperties: false to the schema. Confirmed working since
+the fix.
 
-Local models through Ollama: some vision models do not honor a
-requested JSON schema at all and fall back to their normal free text
-response instead, which Lookout cannot parse. If Lookout logs
-llmvision returned no structured_response, check the rest of that log
-line: as of version 0.4.1 it also shows whatever llmvision actually
-returned, which usually makes it clear whether the model ignored the
-schema. If that is the case, try a different, more capable vision
-model rather than treating this as a Lookout bug specifically; not
-every local model supports constrained or structured output.
+OpenRouter: confirmed working using the model ID openrouter/free,
+OpenRouter's own free model router, which explicitly selects for
+models that support image input and structured output together. This
+has been tested against Lookout's full schema, including fog and
+rain fields, not just a minimal example. Other free OpenRouter models
+tested so far, including nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free
+and minimax/minimax-m3:free, reason about the image correctly and get
+every value right, but return the answer as readable text or Markdown
+instead of raw JSON, which Lookout cannot parse. This looks like a
+real model limitation around enforced structured output rather than a
+schema bug, since the same models produce well formed JSON directly
+in llmvision when given a flat, non nested schema (see the Ollama note
+below for the same pattern).
+
+Local models through Ollama: results have been mixed and instructive.
+One tester found that a local vision model produced correct, complete
+JSON when tested directly with a flat schema, but returned an empty
+object when Lookout asked for the same fields nested under a camera_1
+key. Lookout nests fields per camera (camera_1, camera_2, and so on)
+so that any number of cameras can be analyzed in one request; this
+appears to be harder for some local and smaller models than a flat
+schema would be, even when the model can produce correct structured
+output otherwise. This is a real finding worth taking seriously, not
+just a case of "the model does not support structured output." A
+flatter schema, at least for single camera setups, is a reasonable
+future direction if this pattern holds up with more testing.
+
+If Lookout logs llmvision returned no structured_response, check the
+rest of that log line: as of version 0.4.1 it also shows whatever
+llmvision actually returned, which usually makes it clear whether the
+model ignored the schema, returned it in the wrong shape, or returned
+nothing useful at all.
 
 If you run into a provider or model that does not work, please open a
 GitHub issue with the provider, the model name, and whatever appears
 in the Home Assistant log. This is genuinely useful information for
-improving compatibility.
+improving compatibility, and several of the notes above came directly
+from user reports.
+
+## Troubleshooting
+
+### Enabling debug logs
+
+Home Assistant's default logging usually only shows failures, not the
+detail needed to diagnose why something failed. To see more:
+
+Settings, then System, then Logs, then the gear icon, then add
+custom_components.lookout (and custom_components.llmvision if the
+problem might be on that side) with level Debug.
+
+Alternatively, add this to configuration.yaml and restart:
+
+logger:
+  default: warning
+  logs:
+    custom_components.lookout: debug
+    custom_components.llmvision: debug
+
+After reproducing the problem, check Settings, then System, then
+Logs, for entries from either integration.
+
+### "llmvision returned no structured_response"
+
+This means llmvision's response did not include the JSON Lookout
+expected. As of version 0.4.1 the error also includes whatever was
+actually returned. Common causes, based on real reports so far:
+
+The model returned readable text or Markdown instead of JSON, meaning
+it does not reliably honor requested structured output.
+
+The model returned valid JSON but not nested under camera_1, camera_2,
+and so on the way Lookout's schema requires, which has been observed
+with at least one local Ollama model.
+
+The model was cut off before finishing, which is more likely with
+reasoning models that spend part of their token budget "thinking"
+before answering; try a higher max_tokens value if testing manually.
+
+### "Provider config not found"
+
+This means the provider ID saved in Lookout's configuration no longer
+matches what llmvision currently has registered. Provider IDs can
+change if a provider is reconfigured or recreated. Re-check the
+current ID (see "Provider and model" under Setting up Lookout above)
+and update it in Lookout's options.
 
 ## Entities
 
@@ -222,6 +299,18 @@ cameras can actually see, focused on observation rather than
 automation itself.
 
 ## Changelog
+
+0.4.2
+
+Documentation update based on real user reports. Added a simpler
+method for finding the LLM Vision provider ID (copy entry ID from the
+provider's config entry, rather than only the Developer Tools method).
+Added a Troubleshooting section covering how to enable debug logging
+and the meaning of the two most commonly reported errors. Updated
+provider compatibility notes with confirmed OpenRouter results
+(openrouter/free works, several specific free models return correct
+values but in the wrong format) and a more precise description of the
+Ollama nested-schema finding. No code changes in this release.
 
 0.4.1
 
