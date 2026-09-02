@@ -108,6 +108,14 @@ search for Lookout.
 
 1. Provider and model: enter your LLM Vision provider ID and model
    name, and choose a scan interval from 1 to 30 minutes.
+
+   The provider ID is not something you choose or type freely. It is
+   a code LLM Vision generates when you set up a provider. To find
+   it: go to Developer Tools, then Actions, search for
+   llmvision.image_analyzer, switch to UI mode, select your provider
+   from the Provider dropdown, then switch to YAML mode. The value
+   shown after "provider:" is what you need, for example something
+   like 01KZNE1DNHTE5CS7DEV5T9YG6H.
 2. Add cameras: pick a camera and give it a name, one at a time. Keep
    adding as many as you have, or finish after one.
 3. Dashboard preview: Lookout shows a ready to paste Lovelace card
@@ -120,13 +128,36 @@ Lookout, then Configure.
 ## On providers
 
 Lookout depends on the llmvision integration rather than calling a
-provider's API directly. This is not a Gemini specific dependency.
-llmvision itself supports multiple providers, including local vision
-models through Ollama, OpenAI, Anthropic, and others. Gemini is simply
-what this project's own testing has used so far, because it has a
-free tier. Switching providers, including to a fully local model, only
-requires configuring it in llmvision and updating the model field in
-Lookout's options. No code changes are needed.
+provider's API directly. llmvision itself supports multiple
+providers, including local vision models through Ollama, OpenAI,
+Anthropic, and others.
+
+This project's own testing has mostly used Gemini, because it has a
+free tier. Switching the provider and model fields does not require
+any code changes, but in practice not every provider or model behaves
+identically, and problems have been reported with providers other
+than Gemini:
+
+OpenAI: earlier versions of Lookout produced a JSON schema that OpenAI
+rejected outright with an error mentioning additionalProperties. This
+has been fixed as of version 0.4.1, which adds the required
+additionalProperties: false to the schema. If you still see a schema
+error on OpenAI, please open an issue with the exact message.
+
+Local models through Ollama: some vision models do not honor a
+requested JSON schema at all and fall back to their normal free text
+response instead, which Lookout cannot parse. If Lookout logs
+llmvision returned no structured_response, check the rest of that log
+line: as of version 0.4.1 it also shows whatever llmvision actually
+returned, which usually makes it clear whether the model ignored the
+schema. If that is the case, try a different, more capable vision
+model rather than treating this as a Lookout bug specifically; not
+every local model supports constrained or structured output.
+
+If you run into a provider or model that does not work, please open a
+GitHub issue with the provider, the model name, and whatever appears
+in the Home Assistant log. This is genuinely useful information for
+improving compatibility.
 
 ## Entities
 
@@ -191,6 +222,19 @@ cameras can actually see, focused on observation rather than
 automation itself.
 
 ## Changelog
+
+0.4.1
+
+Fixed a schema bug that caused OpenAI to reject every request with an
+Invalid schema error mentioning additionalProperties. The generated
+JSON schema now includes additionalProperties: false at every object
+level, which OpenAI's structured output mode requires. Error messages
+when llmvision does not return a structured response now include
+whatever llmvision actually returned, to make it possible to tell
+whether a provider or model does not support structured output at
+all, rather than showing a bare, unhelpful error. Setup instructions
+now explain exactly where to find the provider ID, since this was
+reported as confusing.
 
 0.4.0
 

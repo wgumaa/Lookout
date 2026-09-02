@@ -37,7 +37,15 @@ def camera_key(index: int) -> str:
 
 
 def build_response_schema(camera_count: int) -> dict:
-    """Build the structured JSON schema for the given number of cameras."""
+    """Build the structured JSON schema for the given number of cameras.
+
+    Includes "additionalProperties": false at every object level.
+    This is required by OpenAI's structured-output (strict JSON
+    schema) mode; without it, OpenAI rejects the request entirely
+    with an "Invalid schema" error. Other providers, including
+    Gemini, have been observed to accept schemas without this field,
+    but including it is harmless for them and required for OpenAI.
+    """
     camera_schema = {
         "type": "object",
         "properties": {
@@ -58,12 +66,14 @@ def build_response_schema(camera_count: int) -> dict:
             "rain_detected",
             "rain_intensity",
         ],
+        "additionalProperties": False,
     }
     properties = {camera_key(i): camera_schema for i in range(camera_count)}
     return {
         "type": "object",
         "properties": properties,
         "required": list(properties.keys()),
+        "additionalProperties": False,
     }
 
 

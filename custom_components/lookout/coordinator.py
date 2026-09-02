@@ -113,7 +113,31 @@ class LookoutCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         ) or (result or {}).get("structured_response")
 
         if not structured:
-            raise UpdateFailed("llmvision returned no structured_response")
+            # Some provider/model combinations (observed with local
+            # Ollama vision models) don't honor the requested JSON
+            # schema at all and fall back to their normal free-text
+            # response shape (e.g. a "title"/"response_text" pair)
+            # instead. Surface whatever was actually returned so this
+            # is diagnosable instead of a bare "no structured_response"
+            # message with no further information.
+            fallback_text = None
+            if isinstance(result, dict):
+                response_obj = result.get("response", result)
+                if isinstance(response_obj, dict):
+                    fallback_text = (
+                        response_obj.get("response_text")
+                        or response_obj.get("title")
+                        or str(response_obj)
+                    )
+            hint = (
+                f" llmvision returned instead: {fallback_text!r}. "
+                "This usually means the selected model does not "
+                "support enforced JSON schema / structured output. "
+                "Try a different model or provider."
+                if fallback_text
+                else ""
+            )
+            raise UpdateFailed(f"llmvision returned no structured_response.{hint}")
 
         expected_keys = [camera_key(i) for i in range(len(self._cameras))]
         missing = [k for k in expected_keys if k not in structured]
