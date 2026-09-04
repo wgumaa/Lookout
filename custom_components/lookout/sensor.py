@@ -88,7 +88,7 @@ class LookoutCameraCloudCover(_BaseSkyEntity):
     @property
     def native_value(self):
         camera_data = (self.coordinator.data or {}).get(self._key, {})
-        return camera_data.get("ai_cloud_cover")
+        return camera_data.get("cloud_cover")
 
 
 class LookoutCameraConfidence(_BaseSkyEntity):
@@ -122,7 +122,7 @@ class LookoutAverageCloudCover(_BaseSkyEntity):
 
     @property
     def native_value(self):
-        avg = _average_field(self.coordinator.data or {}, "ai_cloud_cover")
+        avg = _average_field(self.coordinator.data or {}, "cloud_cover")
         return round(avg) if avg is not None else None
 
 
@@ -219,7 +219,7 @@ class LookoutEffectiveSkyObstruction(_BaseSkyEntity):
     @property
     def native_value(self):
         data = self.coordinator.data or {}
-        cloud = _average_field(data, "ai_cloud_cover")
+        cloud = _average_field(data, "cloud_cover")
         fog = _average_field(data, "fog_density")
         candidates = [v for v in (cloud, fog) if v is not None]
         if not candidates:
@@ -255,7 +255,7 @@ class LookoutCondition(_BaseSkyEntity):
         if any(v.get("fog_detected") for v in camera_values):
             return "Foggy"
 
-        cloud = _average_field(data, "ai_cloud_cover")
+        cloud = _average_field(data, "cloud_cover")
         if cloud is None:
             return None
 

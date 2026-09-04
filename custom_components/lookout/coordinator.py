@@ -16,6 +16,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from homeassistant.util import dt as dt_util
 
 from .const import (
+    CAMERA_FIELDS,
     DEFAULT_MAX_TOKENS,
     LLMVISION_DOMAIN,
     LLMVISION_SERVICE_IMAGE_ANALYZER,
@@ -139,10 +140,24 @@ class LookoutCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             )
             raise UpdateFailed(f"llmvision returned no structured_response.{hint}")
 
-        expected_keys = [camera_key(i) for i in range(len(self._cameras))]
-        missing = [k for k in expected_keys if k not in structured]
-        if missing:
-            raise UpdateFailed(f"Response missing keys: {missing}")
+        if len(self._cameras) == 1:
+            # A single camera uses a flat schema/prompt (see
+            # const.build_response_schema's docstring for why), so
+            # the fields are expected directly at the top level here,
+            # not nested under a camera_1 key. Validate against the
+            # flat shape, then wrap it into the same internal
+            # {"camera_1": {...}} shape multi-camera responses use,
+            # so every sensor/binary_sensor class can keep reading via
+            # camera_key(i) unchanged regardless of camera count.
+            missing = [f for f in CAMERA_FIELDS if f not in structured]
+            if missing:
+                raise UpdateFailed(f"Response missing fields: {missing}")
+            structured = {camera_key(0): structured}
+        else:
+            expected_keys = [camera_key(i) for i in range(len(self._cameras))]
+            missing = [k for k in expected_keys if k not in structured]
+            if missing:
+                raise UpdateFailed(f"Response missing keys: {missing}")
 
         self.last_success_time = dt_util.utcnow()
         return structured

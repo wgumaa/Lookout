@@ -164,18 +164,44 @@ schema bug, since the same models produce well formed JSON directly
 in llmvision when given a flat, non nested schema (see the Ollama note
 below for the same pattern).
 
-Local models through Ollama: results have been mixed and instructive.
-One tester found that a local vision model produced correct, complete
-JSON when tested directly with a flat schema, but returned an empty
-object when Lookout asked for the same fields nested under a camera_1
-key. Lookout nests fields per camera (camera_1, camera_2, and so on)
-so that any number of cameras can be analyzed in one request; this
-appears to be harder for some local and smaller models than a flat
-schema would be, even when the model can produce correct structured
-output otherwise. This is a real finding worth taking seriously, not
-just a case of "the model does not support structured output." A
-flatter schema, at least for single camera setups, is a reasonable
-future direction if this pattern holds up with more testing.
+Local models through Ollama: results are model specific, not a
+blanket yes or no for local models in general.
+
+Confirmed working: qwen2.5vl produced correct, accurate, properly
+structured output, including the full nested per camera schema, in
+testing. This is a genuine fully local, fully free option and the
+current recommendation if you want to avoid a cloud provider
+entirely.
+
+Fixed in single camera setups as of 0.5.0: glimpse-v1 produced
+correct, complete JSON when tested directly with a flat schema, but
+returned an empty object when asked for the same fields nested under
+a camera_1 key, which is how Lookout structured multi-camera
+requests. As of 0.5.0, single camera setups use a flat schema instead
+of nesting, matching what worked in direct testing. This has not yet
+been re-confirmed against glimpse-v1 specifically through Lookout
+itself; if you test this, a report either way is useful. Setups with
+two or more cameras still use the nested schema, since a request
+covering multiple images needs some way to distinguish which fields
+belong to which image.
+
+Confirmed not working, model returns nothing usable: qwen3-vl:8b
+returned an empty response with no error. Not yet root caused; if you
+hit this, try the same request with response_format left as text and
+no structure field, to check whether the model can process the image
+at all outside of a structured output request.
+
+Not a Lookout issue: llama3.2-vision fails to load in Ollama entirely
+with "unknown model architecture: 'mllama'", which is a known upstream
+Ollama bug (see ollama/ollama issue 16547), not something specific to
+Lookout or llmvision.
+
+A note on manual testing: if you test a schema by hand in llmvision's
+own Structure field, it must be valid JSON, no trailing commas, and
+lowercase true and false. Python style syntax, which allows trailing
+commas and capitalizes True and False, will fail with a JSON parse
+error there even though Lookout's own code never has this problem,
+since it builds the schema as a native object rather than typed text.
 
 If Lookout logs llmvision returned no structured_response, check the
 rest of that log line: as of version 0.4.1 it also shows whatever
@@ -299,6 +325,53 @@ cameras can actually see, focused on observation rather than
 automation itself.
 
 ## Changelog
+
+0.5.0
+
+Internal schema field renamed from ai_cloud_cover to cloud_cover.
+Home Assistant entity IDs, dashboards, and automations are not
+affected by this, since entities are named from your camera names,
+not from this internal field. This only matters if you have manually
+tested or built something against the raw structured_response JSON
+using the old field name, for example a hand copied schema in
+llmvision's own testing tools, or a custom automation reading the
+service response directly. Update any such reference from
+ai_cloud_cover to cloud_cover.
+
+Rain detection logic changed in a way that will produce different
+results than before, worth knowing about before updating. Previously,
+rain_detected required visible motion in the scene, streaks,
+splashes, or rippling puddles. In practice this meant steady light to
+moderate rain, which often shows no visible motion in a single still
+frame, was frequently missed. rain_detected now also considers
+whether the sky in the same image is overcast and surfaces look
+distinctly wet, treating that combination as real evidence of active
+rain rather than requiring visible motion. To avoid the opposite
+mistake, wet looking surfaces alone are explicitly not enough when
+the sky is clear or the sun is visible, since that combination
+usually means rain has already stopped and what is visible is
+residual wetness while conditions clear. If you were relying on the
+previous, stricter behavior, expect rain_detected to trigger more
+often under genuinely overcast, wet conditions than it did before.
+
+Single camera setups now use a flat schema instead of nesting fields
+under a camera_1 key, matching what some local vision models were
+observed to handle correctly when tested directly but not through
+Lookout's previous nested request. Two or more cameras are
+unaffected and continue to use the nested schema. This is handled
+internally; the sensors and entities you already have are not
+affected either way.
+
+0.4.3
+
+Documentation update. Confirmed qwen2.5vl as a working, accurate,
+fully local model through Ollama, including with Lookout's full
+nested per camera schema. Documented gemma3, minimax-m3, and the
+nvidia nemotron reasoning model as not reliably producing valid
+structured output, and llama3.2-vision as failing due to an unrelated
+upstream Ollama bug. Added a note about manual testing requiring
+valid JSON syntax rather than Python style syntax in llmvision's own
+Structure field. No code changes in this release.
 
 0.4.2
 
